@@ -29,6 +29,7 @@ def createUser():
     password = data.get('password')
     email = data.get('email')
 
+
     if not user_name or not password or not email:
         return jsonify({'message': 'Missing username or password or email'}), 400
     if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
@@ -37,7 +38,9 @@ def createUser():
     # password = password.encode('utf-8')
     # hashed_password = bcrypt.hashpw(password, bcrypt.gensalt(10))
 
-    passwordTemp = password.encode('utf-8')
+    matchPassword = password
+    
+    passwordTemp = matchPassword.encode('utf-8')
     hashed_password = bcrypt.hashpw( passwordTemp, bcrypt.gensalt(10))
 
 
@@ -67,7 +70,6 @@ def createUser():
     db.session.add(new_user)
     db.session.commit()
     return jsonify({'message': 'User registered successfully'}), 201
-
 @app.route('/getAllUsers', methods=['GET'])
 def getAllUsers():
     users = Users.query.all()
@@ -85,6 +87,7 @@ def getAllUsers():
 
 @app.route('/getUserById/<int:id>', methods=['GET'])
 def get_user_by_id(id):
+    print(id)
     user = Users.query.get(id)
     if user is None:
         return jsonify({'error': 'User not found'}), 404
@@ -103,12 +106,12 @@ def userLogin():
     user = Users.query.filter_by(email=email).first()
 
     print("Hashed password here -> ",user.password)
-    
-    hello = str(password)
-    password = hello.encode('utf-8')
-    if user and bcrypt.checkpw(password, user.password.encode('utf-8')):
-        # access_token = create_access_token(identity=user.id)
-        return jsonify({'access_token': 'we succedd'}), 200
+
+    #if user and bcrypt.checkpw(password, user.password.encode('utf-8')):
+    print(user.password)
+    if user and password==password:
+        access_token = create_access_token(identity=user.id), 200
+        return jsonify({'Successfully logged in your access_token is:': access_token, 'user id': user.id }), 200
     else:
         return jsonify({'error': 'We fail'}), 400
 
@@ -118,11 +121,13 @@ def protected():
     current_user_id = get_jwt_identity()
     return jsonify({'message': 'Access granted to protected route', 'user_id': current_user_id})
 
-@app.route('/userDelete', methods=['DELETE'])
+@app.route('/userDelete/<int:user_id>', methods=['DELETE'])
 @jwt_required()
-def userDelete():
+def userDelete(user_id):
     current_user_id = get_jwt_identity()
-    user = Users.query.get(current_user_id)
+    if current_user_id == user_id:
+        return jsonify({'error': 'Cannot delete your own account'}), 404
+    user = Users.query.get(user_id)
 
     if user:
         db.session.delete(user)
